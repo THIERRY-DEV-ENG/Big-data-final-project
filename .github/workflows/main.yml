@@ -1,12 +1,9 @@
-# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Scheduled Economic Data Pipeline
 
 on:
   schedule:
-    # Runs every day at 6:00 AM UTC
     - cron: '0 6 * * *'
   workflow_dispatch:
-    # This adds a manual "Run workflow" button on GitHub, so I can trigger it by hand too
 
 jobs:
   run-pipeline:
