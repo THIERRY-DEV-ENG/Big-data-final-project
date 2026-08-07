@@ -1,4 +1,3 @@
-# export_for_tableau.py
 import pandas as pd
 import sqlalchemy
 import os

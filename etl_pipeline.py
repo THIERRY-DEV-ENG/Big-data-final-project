@@ -1,14 +1,8 @@
-# etl_pipeline.py
-# Runs the full ETL pipeline: Extract -> Transform -> Validate -> Load
-# This is the single entry point automation (cron, CI/CD) will call
-
 import logging
 import os
 import sys
 from datetime import datetime
 
-# Logging must be set up BEFORE importing our modules, so their
-# logger.info() calls are captured from the very first line
 os.makedirs("logs", exist_ok=True)
 log_file = f"logs/pipeline_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 

@@ -1,6 +1,3 @@
-# extract.py
-# Get economic indicators from the FRED API
-
 import requests
 import json
 import os

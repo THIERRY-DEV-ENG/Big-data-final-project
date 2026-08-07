@@ -1,22 +1,21 @@
-# ai_assistant.py
-# Lets someone ask a plain English question about the economic data
-# and get a plain English answer back. Flow: question -> SQL -> run SQL -> English.
-
 import os
 import time
 import sqlalchemy
 import logging
-from google import genai
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-MODEL_NAME = "gemini-2.0-flash-lite-001"
+client = OpenAI(
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
+MODEL_NAME = "llama-3.3-70b-versatile"
 
-# This is the only thing the AI knows about our data - nothing else.
 SCHEMA = """
 Table name: cleaned_economic_data
 
@@ -38,21 +37,24 @@ def get_db_engine():
     return sqlalchemy.create_engine(url)
 
 
-def call_gemini_with_retry(prompt, max_retries=3):
+def call_groq_with_retry(prompt, max_retries=3):
     """
-    Gemini sometimes returns 503 when it's overloaded (saw this myself
-    during testing). Same retry pattern as extract.py - wait 1s, 2s, 4s.
+    Handles retries if the remote inference server hits a high traffic rate limit.
     """
     delay = 1
     for attempt in range(1, max_retries + 1):
         try:
-            return client.models.generate_content(model=MODEL_NAME, contents=prompt)
+            response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return response.choices[0].message.content
         except Exception as e:
-            logger.warning(f"Gemini call failed on attempt {attempt}: {e}")
+            logger.warning(f"Groq call failed on attempt {attempt}: {e}")
             if attempt < max_retries:
                 time.sleep(delay)
                 delay *= 2
-    raise Exception("Gemini API unavailable after retries")
+    raise Exception("Groq API engine unavailable after retries")
 
 
 def question_to_sql(question):
@@ -71,8 +73,8 @@ Rules:
 User question: {question}
 
 SQL query:"""
-    response = call_gemini_with_retry(prompt)
-    sql = response.text.strip().replace("```sql", "").replace("```", "").strip()
+    response_text = call_groq_with_retry(prompt)
+    sql = response_text.strip().replace("```sql", "").replace("```", "").strip()
     logger.info(f"Generated SQL: {sql}")
     return sql
 
@@ -96,11 +98,11 @@ The user asked: "{question}"
 The database returned this result:
 {sql_result}
 
-Write a clear, friendly one or two sentence answer in plain English.
+Write a direct, natural response answering the question based strictly on these numbers.
+NEVER use bullet points or bold markers. Use pure unformatted text only.
 Include the specific numbers. Do not mention SQL, databases, or rows.
 """
-    response = call_gemini_with_retry(prompt)
-    return response.text.strip()
+    return call_groq_with_retry(prompt).strip()
 
 
 def ask(question, engine):
@@ -122,7 +124,7 @@ def ask(question, engine):
 
 def run_chat():
     print("\n" + "=" * 50)
-    print("US ECONOMIC INDICATORS AI ASSISTANT")
+    print("US ECONOMIC INDICATORS AI ASSISTANT (GROQ POWERED)")
     print("Ask about CPI, unemployment, fed funds, GDP, sentiment")
     print("Type 'quit' to exit")
     print("=" * 50 + "\n")
@@ -142,3 +144,4 @@ def run_chat():
 
 if __name__ == "__main__":
     run_chat()
+    

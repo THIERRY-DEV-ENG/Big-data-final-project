@@ -1,6 +1,3 @@
-# train_model.py
-# Train two models to predict CPI (inflation) from other economic indicators
-
 import pandas as pd
 import sqlalchemy
 import os
@@ -23,7 +20,6 @@ TARGET = "cpi"
 
 
 def load_data():
-    """Load cleaned data from PostgreSQL."""
     url = (
         f"postgresql+psycopg2://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
         f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
@@ -35,7 +31,6 @@ def load_data():
 
 
 def prepare_features(df):
-    """Drop rows missing consumer_sentiment - only for training, not the stored data."""
     df_ml = df[FEATURES + [TARGET]].dropna()
     logger.info(f"Rows available for training after dropping NaN: {len(df_ml)} (of {len(df)} total)")
     return df_ml[FEATURES], df_ml[TARGET]
@@ -50,7 +45,6 @@ def train_and_evaluate():
 
     results = {}
 
-    # Model 1: Linear Regression
     lr = LinearRegression()
     lr.fit(X_train, y_train)
     pred_test = lr.predict(X_test)
@@ -63,7 +57,6 @@ def train_and_evaluate():
         "r2_train": r2_score(y_train, pred_train),
     }
 
-    # Model 2: Random Forest
     rf = RandomForestRegressor(n_estimators=100, max_depth=4, random_state=42)
     rf.fit(X_train, y_train)
     pred_test = rf.predict(X_test)
@@ -76,7 +69,6 @@ def train_and_evaluate():
         "r2_train": r2_score(y_train, pred_train),
     }
 
-    # Print comparison
     print("\n" + "=" * 55)
     print("MODEL COMPARISON: Predicting CPI (inflation)")
     print("=" * 55)
@@ -93,12 +85,11 @@ def train_and_evaluate():
     print(f"\nBetter model: {winner} (higher test R2)")
     print("=" * 55)
 
-    # Check which feature Random Forest is relying on most - investigate the perfect R2
     importances = pd.Series(rf.feature_importances_, index=FEATURES).sort_values(ascending=False)
     print("\nRandom Forest feature importances:")
     print(importances)
     print("=" * 55)
-    # Overfitting demonstration: compare different max_depth values
+
     print("\nOverfitting check across different max_depth values:")
     for depth in [2, 4, 6, None]:
         rf_test = RandomForestRegressor(n_estimators=100, max_depth=depth, random_state=42)
@@ -107,7 +98,6 @@ def train_and_evaluate():
         r2_te = r2_score(y_test, rf_test.predict(X_test))
         print(f"  max_depth={depth}: train R2={r2_tr:.3f}  test R2={r2_te:.3f}  gap={r2_tr - r2_te:.3f}")
 
-    # Save both models + metrics
     os.makedirs("models", exist_ok=True)
     for name, r in results.items():
         joblib.dump(r["model"], f"models/{name}.pkl")
@@ -118,7 +108,6 @@ def train_and_evaluate():
             }, f, indent=2)
     logger.info("Models and metrics saved to models/")
 
-    # Save predictions for Tableau (one required chart: predictions vs actual)
     df_preds = X_test.copy()
     df_preds["actual_cpi"] = y_test.values
     df_preds["predicted_cpi_rf"] = results["random_forest"]["model"].predict(X_test)

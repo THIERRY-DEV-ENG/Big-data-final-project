@@ -1,4 +1,3 @@
-# tests/test_pipeline.py
 import pytest
 import pandas as pd
 import sys
@@ -18,7 +17,7 @@ class TestTransform:
             {"date": "2020-01-01", "value": "5.0",   "series_id": "UNRATE"},
             {"date": "2020-01-01", "value": "1.5",   "series_id": "FEDFUNDS"},
             {"date": "2020-01-01", "value": "21000", "series_id": "GDP"},
-            {"date": "2020-01-01", "value": ".",     "series_id": "UMCSENT"},  # missing
+            {"date": "2020-01-01", "value": ".",     "series_id": "UMCSENT"},
         ]
 
     def test_returns_dataframe(self):
@@ -57,10 +56,9 @@ class TestValidate:
         assert len(result) == 2
 
     def test_sentiment_null_is_flagged_not_dropped(self):
-        """A null in consumer_sentiment should stay in the data but appear in issues."""
         result, issues = validate_data(self.clean_df())
-        assert len(result) == 2                          # row NOT dropped
-        assert "consumer_sentiment_nulls" in issues        # but IS flagged
+        assert len(result) == 2
+        assert "consumer_sentiment_nulls" in issues
 
     def test_negative_unemployment_removed(self):
         df = self.clean_df()
